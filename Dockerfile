@@ -26,7 +26,8 @@ ENV GITLAB_INSTALL_DIR="${GITLAB_HOME}/gitlab" \
     GITLAB_DATA_DIR="${GITLAB_HOME}/data" \
     GITLAB_BUILD_DIR="${GITLAB_CACHE_DIR}/build" \
     GITLAB_RUNTIME_DIR="${GITLAB_CACHE_DIR}/runtime" \
-    GITLAB_CONF_DIRECTORY="/tmp/configs"
+    GITLAB_CONF_DIRECTORY="/tmp/configs" \
+    EXEC_AS_GIT="sudo -HEu ${GITLAB_USER}"
 
 ENV GITLAB_CLONE_URL=https://gitlab.com/gitlab-org/gitlab-ce.git \
     GITLAB_SHELL_URL=https://gitlab.com/gitlab-org/gitlab-shell/repository/archive.tar.gz \
@@ -84,11 +85,6 @@ RUN cd /tmp \
 
 COPY assets/build/ ${GITLAB_BUILD_DIR}/
 COPY ./assets/build/config /tmp/configs
-COPY ./assets/build/config/exec_as_git.sh /usr/local/bin/exec_as_git
-
-## Define function to execute a command as GITLAB_USER
-##RUN cat ${GITLAB_CONF_DIRECTORY}/exec_as_git.function >> /root/.profile
-##RUN ["/bin/bash", "-c", "source ${GITLAB_CONF_DIRECTORY}/exec_as_git.sh"]
 
 # install build dependencies for gem installation
 RUN apt-get update \
@@ -121,13 +117,13 @@ RUN adduser --disabled-login --gecos 'GitLab' ${GITLAB_USER} \
 RUN echo "PATH=/usr/local/sbin:/usr/local/bin:\$PATH" >> ${GITLAB_HOME}/.profile
 
 # configure git for ${GITLAB_USER}
-RUN exec_as_git git config --global core.autocrlf input
-RUN exec_as_git git config --global gc.auto 0
-RUN exec_as_git git config --global repack.writeBitmaps true
+RUN ${EXEC_AS_GIT} git config --global core.autocrlf input
+RUN ${EXEC_AS_GIT} git config --global gc.auto 0
+RUN ${EXEC_AS_GIT} git config --global repack.writeBitmaps true
 
 # shallow clone gitlab-ce
 RUN echo "Cloning gitlab-ce v.${GITLAB_VERSION}..."
-RUN exec_as_git git clone -q -b v${GITLAB_VERSION} --depth 1 ${GITLAB_CLONE_URL} ${GITLAB_INSTALL_DIR}
+RUN ${EXEC_AS_GIT} git clone -q -b v${GITLAB_VERSION} --depth 1 ${GITLAB_CLONE_URL} ${GITLAB_INSTALL_DIR}
 
 # ENV GITLAB_SHELL_VERSION="${GITLAB_SHELL_VERSION:-$(cat ${GITLAB_INSTALL_DIR}/GITLAB_SHELL_VERSION)}" \
 #     GITLAB_WORKHORSE_VERSION="${GITLAB_WORKHOUSE_VERSION:-$(cat ${GITLAB_INSTALL_DIR}/GITLAB_WORKHORSE_VERSION)}" \
@@ -147,24 +143,17 @@ RUN rm -rf ${GITLAB_BUILD_DIR}/gitlab-shell-${GITLAB_SHELL_VERSION}.tar.gz
 RUN chown -R ${GITLAB_USER}: ${GITLAB_SHELL_INSTALL_DIR}
 
 RUN cd ${GITLAB_SHELL_INSTALL_DIR}
-RUN exec_as_git cp -a ${GITLAB_SHELL_INSTALL_DIR}/config.yml.example ${GITLAB_SHELL_INSTALL_DIR}/config.yml
+RUN ${EXEC_AS_GIT} cp -a ${GITLAB_SHELL_INSTALL_DIR}/config.yml.example ${GITLAB_SHELL_INSTALL_DIR}/config.yml
 RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/compile_gitlab_shell.sh
-RUN exec_as_git ./bin/install
+RUN ${EXEC_AS_GIT} ./bin/install
 
 # remove unused repositories directory created by gitlab-shell install
-RUN exec_as_git rm -rf ${GITLAB_HOME}/repositories
+RUN ${EXEC_AS_GIT} rm -rf ${GITLAB_HOME}/repositories
 
 # download gitlab-workhorse
 RUN echo "Cloning gitlab-workhorse v.${GITLAB_WORKHORSE_VERSION}..." \
 # RUN mkdir -p ${GITLAB_WORKHORSE_INSTALL_DIR}
-RUN exec_as_git git clone -q -b v${GITLAB_WORKHORSE_VERSION} --depth 1 ${GITLAB_WORKHORSE_URL} ${GITLAB_WORKHORSE_INSTALL_DIR} \
- && exec_as_git git --version \
- && exec_as_git echo $PATH \
- && touch /root/test \
- && ls /root/test \
- && which git \
- && ls /home/ \
- && ls ${GITLAB_HOME} \
+RUN ${EXEC_AS_GIT} git clone -q -b v${GITLAB_WORKHORSE_VERSION} --depth 1 ${GITLAB_WORKHORSE_URL} ${GITLAB_WORKHORSE_INSTALL_DIR} \
  && chown -R ${GITLAB_USER}: ${GITLAB_WORKHORSE_INSTALL_DIR}
 
 #install gitlab-workhorse
@@ -196,7 +185,7 @@ RUN tar xf ${GITLAB_BUILD_DIR}/gitaly-${GITALY_SERVER_VERSION}.tar.gz --strip 1 
 RUN rm -rf ${GITLAB_BUILD_DIR}/gitaly-${GITALY_SERVER_VERSION}.tar.gz
 RUN chown -R ${GITLAB_USER}: ${GITLAB_GITALY_INSTALL_DIR}
 # copy default config for gitaly
-RUN exec_as_git cp ${GITLAB_GITALY_INSTALL_DIR}/config.toml.example ${GITLAB_GITALY_INSTALL_DIR}/config.toml
+RUN ${EXEC_AS_GIT} cp ${GITLAB_GITALY_INSTALL_DIR}/config.toml.example ${GITLAB_GITALY_INSTALL_DIR}/config.toml
 
 # install gitaly
 RUN cd ${GITLAB_GITALY_INSTALL_DIR}
@@ -206,10 +195,10 @@ RUN PATH=/tmp/go/bin:$PATH GOROOT=/tmp/go make install && make clean
 RUN rm -rf ${GITLAB_BUILD_DIR}/go${GOLANG_VERSION}.linux-amd64.tar.gz /tmp/go
 
 # remove HSTS config from the default headers, we configure it in nginx
-RUN exec_as_git sed -i "/headers\['Strict-Transport-Security'\]/d" ${GITLAB_INSTALL_DIR}/app/controllers/application_controller.rb
+RUN ${EXEC_AS_GIT} sed -i "/headers\['Strict-Transport-Security'\]/d" ${GITLAB_INSTALL_DIR}/app/controllers/application_controller.rb
 
 # revert `rake gitlab:setup` changes from gitlabhq/gitlabhq@a54af831bae023770bf9b2633cc45ec0d5f5a66a
-RUN exec_as_git sed -i 's/db:reset/db:setup/' ${GITLAB_INSTALL_DIR}/lib/tasks/gitlab/setup.rake
+RUN ${EXEC_AS_GIT} sed -i 's/db:reset/db:setup/' ${GITLAB_INSTALL_DIR}/lib/tasks/gitlab/setup.rake
 
 RUN cd ${GITLAB_INSTALL_DIR}
 
@@ -219,22 +208,22 @@ RUN /bin/bash -c 'if [[ -d ${GEM_CACHE_DIR} ]]; then \
   chown -R ${GITLAB_USER}: ${GITLAB_INSTALL_DIR}/vendor/cache \
 fi'
 
-RUN exec_as_git bundle install -j$(nproc) --deployment --without development test aws
+RUN ${EXEC_AS_GIT} bundle install -j$(nproc) --deployment --without development test aws
 
 # make sure everything in ${GITLAB_HOME} is owned by ${GITLAB_USER} user
 RUN chown -R ${GITLAB_USER}: ${GITLAB_HOME}
 
 # gitlab.yml and database.yml are required for `assets:precompile`
-RUN exec_as_git cp ${GITLAB_INSTALL_DIR}/config/resque.yml.example ${GITLAB_INSTALL_DIR}/config/resque.yml
-RUN exec_as_git cp ${GITLAB_INSTALL_DIR}/config/gitlab.yml.example ${GITLAB_INSTALL_DIR}/config/gitlab.yml
-RUN exec_as_git cp ${GITLAB_INSTALL_DIR}/config/database.yml.mysql ${GITLAB_INSTALL_DIR}/config/database.yml
+RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/resque.yml.example ${GITLAB_INSTALL_DIR}/config/resque.yml
+RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/gitlab.yml.example ${GITLAB_INSTALL_DIR}/config/gitlab.yml
+RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.mysql ${GITLAB_INSTALL_DIR}/config/database.yml
 
 # Installs nodejs packages required to compile webpack
-RUN exec_as_git yarn install --production --pure-lockfile
-RUN exec_as_git yarn add ajv@^4.0.0
+RUN ${EXEC_AS_GIT} yarn install --production --pure-lockfile
+RUN ${EXEC_AS_GIT} yarn add ajv@^4.0.0
 
 RUN echo "Compiling assets. Please be patient, this could take a while..."
-RUN exec_as_git bundle exec rake gitlab:assets:compile USE_DB=false SKIP_STORAGE_VALIDATION=true
+RUN ${EXEC_AS_GIT} bundle exec rake gitlab:assets:compile USE_DB=false SKIP_STORAGE_VALIDATION=true
 
 # remove auto generated ${GITLAB_DATA_DIR}/config/secrets.yml
 RUN rm -rf ${GITLAB_DATA_DIR}/config/secrets.yml
@@ -242,12 +231,12 @@ RUN rm -rf ${GITLAB_DATA_DIR}/config/secrets.yml
 # remove gitlab shell and workhorse secrets
 RUN rm -f ${GITLAB_INSTALL_DIR}/.gitlab_shell_secret ${GITLAB_INSTALL_DIR}/.gitlab_workhorse_secret
 
-RUN exec_as_git mkdir -p ${GITLAB_INSTALL_DIR}/tmp/pids/ ${GITLAB_INSTALL_DIR}/tmp/sockets/
+RUN ${EXEC_AS_GIT} mkdir -p ${GITLAB_INSTALL_DIR}/tmp/pids/ ${GITLAB_INSTALL_DIR}/tmp/sockets/
 RUN chmod -R u+rwX ${GITLAB_INSTALL_DIR}/tmp
 
 # symlink ${GITLAB_HOME}/.ssh -> ${GITLAB_LOG_DIR}/gitlab
 RUN rm -rf ${GITLAB_HOME}/.ssh
-RUN exec_as_git ln -sf ${GITLAB_DATA_DIR}/.ssh ${GITLAB_HOME}/.ssh
+RUN ${EXEC_AS_GIT} ln -sf ${GITLAB_DATA_DIR}/.ssh ${GITLAB_HOME}/.ssh
 
 # symlink ${GITLAB_INSTALL_DIR}/log -> ${GITLAB_LOG_DIR}/gitlab
 RUN rm -rf ${GITLAB_INSTALL_DIR}/log
@@ -255,11 +244,11 @@ RUN ln -sf ${GITLAB_LOG_DIR}/gitlab ${GITLAB_INSTALL_DIR}/log
 
 # symlink ${GITLAB_INSTALL_DIR}/public/uploads -> ${GITLAB_DATA_DIR}/uploads
 RUN rm -rf ${GITLAB_INSTALL_DIR}/public/uploads
-RUN exec_as_git ln -sf ${GITLAB_DATA_DIR}/uploads ${GITLAB_INSTALL_DIR}/public/uploads
+RUN ${EXEC_AS_GIT} ln -sf ${GITLAB_DATA_DIR}/uploads ${GITLAB_INSTALL_DIR}/public/uploads
 
 # symlink ${GITLAB_INSTALL_DIR}/.secret -> ${GITLAB_DATA_DIR}/.secret
 RUN rm -rf ${GITLAB_INSTALL_DIR}/.secret
-RUN exec_as_git ln -sf ${GITLAB_DATA_DIR}/.secret ${GITLAB_INSTALL_DIR}/.secret
+RUN ${EXEC_AS_GIT} ln -sf ${GITLAB_DATA_DIR}/.secret ${GITLAB_INSTALL_DIR}/.secret
 
 # WORKAROUND for https://github.com/sameersbn/docker-gitlab/issues/509
 RUN rm -rf ${GITLAB_INSTALL_DIR}/builds
