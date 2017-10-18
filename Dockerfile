@@ -169,13 +169,13 @@ RUN rm -rf ${GITLAB_BUILD_DIR}/gitlab-pages-${GITLAB_PAGES_VERSION}.tar.gz
 RUN chown -R ${GITLAB_USER}: ${GITLAB_PAGES_INSTALL_DIR}
 
 #install gitlab-pages
-RUN cd ${GITLAB_PAGES_INSTALL_DIR}
-RUN GODIR=/tmp/go/src/gitlab.com/gitlab-org/gitlab-pages
-RUN mkdir -p "$(dirname "$GODIR")"
-RUN ln -sfv "$(pwd -P)" "$GODIR"
-RUN cd "$GODIR"
-RUN PATH=/tmp/go/bin:$PATH GOROOT=/tmp/go make gitlab-pages
-RUN mv gitlab-pages /usr/local/bin/
+ENV GODIR="/tmp/go/src/gitlab.com/gitlab-org/gitlab-pages"
+RUN /bin/bash -c 'cd ${GITLAB_PAGES_INSTALL_DIR} \
+ && mkdir -p "$(dirname "$GODIR")" \
+ && ln -sfv "$(pwd -P)" "$GODIR" \
+ && cd $GODIR \
+ && PATH=/tmp/go/bin:$PATH GOROOT=/tmp/go make gitlab-pages \
+ && mv gitlab-pages /usr/local/bin/'
 
 # download gitaly
 RUN echo "Downloading gitaly v.${GITALY_SERVER_VERSION}..."
@@ -188,8 +188,8 @@ RUN chown -R ${GITLAB_USER}: ${GITLAB_GITALY_INSTALL_DIR}
 RUN ${EXEC_AS_GIT} cp ${GITLAB_GITALY_INSTALL_DIR}/config.toml.example ${GITLAB_GITALY_INSTALL_DIR}/config.toml
 
 # install gitaly
-RUN cd ${GITLAB_GITALY_INSTALL_DIR}
-RUN PATH=/tmp/go/bin:$PATH GOROOT=/tmp/go make install && make clean
+RUN cd ${GITLAB_GITALY_INSTALL_DIR} \
+ && PATH=/tmp/go/bin:$PATH GOROOT=/tmp/go make install && make clean
 
 # remove go
 RUN rm -rf ${GITLAB_BUILD_DIR}/go${GOLANG_VERSION}.linux-amd64.tar.gz /tmp/go
