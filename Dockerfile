@@ -200,15 +200,12 @@ RUN ${EXEC_AS_GIT} sed -i "/headers\['Strict-Transport-Security'\]/d" ${GITLAB_I
 # revert `rake gitlab:setup` changes from gitlabhq/gitlabhq@a54af831bae023770bf9b2633cc45ec0d5f5a66a
 RUN ${EXEC_AS_GIT} sed -i 's/db:reset/db:setup/' ${GITLAB_INSTALL_DIR}/lib/tasks/gitlab/setup.rake
 
-RUN cd ${GITLAB_INSTALL_DIR}
+# RUN cd ${GITLAB_INSTALL_DIR}
 
 # install gems, use local cache if available
-RUN /bin/bash -c 'if [[ -d ${GEM_CACHE_DIR} ]]; then \
-  mv ${GEM_CACHE_DIR} ${GITLAB_INSTALL_DIR}/vendor/cache \
-  chown -R ${GITLAB_USER}: ${GITLAB_INSTALL_DIR}/vendor/cache \
-fi'
-
-RUN ${EXEC_AS_GIT} bundle install -j$(nproc) --deployment --without development test aws
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/install_gems.sh
+RUN cd ${GITLAB_INSTALL_DIR} \
+ && ${EXEC_AS_GIT} bundle install -j$(nproc) --deployment --without development test mysql aws kerberos
 
 # make sure everything in ${GITLAB_HOME} is owned by ${GITLAB_USER} user
 RUN chown -R ${GITLAB_USER}: ${GITLAB_HOME}
@@ -216,7 +213,8 @@ RUN chown -R ${GITLAB_USER}: ${GITLAB_HOME}
 # gitlab.yml and database.yml are required for `assets:precompile`
 RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/resque.yml.example ${GITLAB_INSTALL_DIR}/config/resque.yml
 RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/gitlab.yml.example ${GITLAB_INSTALL_DIR}/config/gitlab.yml
-RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.mysql ${GITLAB_INSTALL_DIR}/config/database.yml
+RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.postgresql ${GITLAB_INSTALL_DIR}/config/database.yml
+# RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.mysql ${GITLAB_INSTALL_DIR}/config/database.yml
 
 # Installs nodejs packages required to compile webpack
 RUN ${EXEC_AS_GIT} yarn install --production --pure-lockfile
