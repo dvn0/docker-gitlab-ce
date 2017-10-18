@@ -145,13 +145,13 @@ RUN chown -R ${GITLAB_USER}: ${GITLAB_SHELL_INSTALL_DIR}
 RUN cd ${GITLAB_SHELL_INSTALL_DIR}
 RUN ${EXEC_AS_GIT} cp -a ${GITLAB_SHELL_INSTALL_DIR}/config.yml.example ${GITLAB_SHELL_INSTALL_DIR}/config.yml
 RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/compile_gitlab_shell.sh
-RUN ${EXEC_AS_GIT} ./bin/install
+# RUN ${EXEC_AS_GIT} ./bin/install
 
 # remove unused repositories directory created by gitlab-shell install
 RUN ${EXEC_AS_GIT} rm -rf ${GITLAB_HOME}/repositories
 
 # download gitlab-workhorse
-RUN echo "Cloning gitlab-workhorse v.${GITLAB_WORKHORSE_VERSION}..." \
+RUN echo "Cloning gitlab-workhorse v.${GITLAB_WORKHORSE_VERSION}..."
 # RUN mkdir -p ${GITLAB_WORKHORSE_INSTALL_DIR}
 RUN ${EXEC_AS_GIT} git clone -q -b v${GITLAB_WORKHORSE_VERSION} --depth 1 ${GITLAB_WORKHORSE_URL} ${GITLAB_WORKHORSE_INSTALL_DIR} \
  && chown -R ${GITLAB_USER}: ${GITLAB_WORKHORSE_INSTALL_DIR}
