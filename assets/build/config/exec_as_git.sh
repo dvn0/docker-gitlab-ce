@@ -1,0 +1,9 @@
+#!/bin/bash
+
+exec_as_git() {
+  if [[ $(whoami) == ${GITLAB_USER} ]]; then
+    $@
+  else
+    sudo -HEu ${GITLAB_USER} "$@"
+  fi
+}
