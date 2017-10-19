@@ -83,6 +83,8 @@ RUN cd /tmp \
  && make prefix=/usr/local all \
  && make prefix=/usr/local install
 
+RUN ln -s /usr/local/bin/git /usr/bin/git
+
 COPY assets/build/ ${GITLAB_BUILD_DIR}/
 COPY ./assets/build/config /tmp/configs
 
@@ -208,7 +210,7 @@ RUN cd ${GITLAB_INSTALL_DIR} \
  && ${EXEC_AS_GIT} bundle install -j$(nproc) --deployment --without development test mysql aws kerberos
 
 # make sure everything in ${GITLAB_HOME} is owned by ${GITLAB_USER} user
-RUN chown -R ${GITLAB_USER}: ${GITLAB_HOME}
+RUN chown -v -R ${GITLAB_USER}: ${GITLAB_HOME}
 
 # gitlab.yml and database.yml are required for `assets:precompile`
 RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/resque.yml.example ${GITLAB_INSTALL_DIR}/config/resque.yml
@@ -217,11 +219,13 @@ RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.postgresql ${GIT
 # RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/database.yml.mysql ${GITLAB_INSTALL_DIR}/config/database.yml
 
 # Installs nodejs packages required to compile webpack
-RUN ${EXEC_AS_GIT} yarn install --production --pure-lockfile
-RUN ${EXEC_AS_GIT} yarn add ajv@^4.0.0
+RUN cd ${GITLAB_INSTALL_DIR} \
+ && ${EXEC_AS_GIT} yarn install --production --pure-lockfile \
+ && ${EXEC_AS_GIT} yarn add ajv@^4.0.0
 
 RUN echo "Compiling assets. Please be patient, this could take a while..."
-RUN ${EXEC_AS_GIT} bundle exec rake gitlab:assets:compile USE_DB=false SKIP_STORAGE_VALIDATION=true
+RUN cd ${GITLAB_INSTALL_DIR} \
+ && ${EXEC_AS_GIT} bundle exec rake gitlab:assets:compile USE_DB=false SKIP_STORAGE_VALIDATION=true
 
 # remove auto generated ${GITLAB_DATA_DIR}/config/secrets.yml
 RUN rm -rf ${GITLAB_DATA_DIR}/config/secrets.yml
