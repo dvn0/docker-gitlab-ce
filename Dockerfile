@@ -68,7 +68,7 @@ RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt
       ruby${RUBY_VERSION} python2.7 python-docutils nodejs yarn gettext-base \
       libpq-dev zlib1g-dev libyaml-dev libssl-dev \
       libgdbm-dev libre2-dev libreadline-dev libcurl4-openssl-dev libncurses5-dev libffi-dev \
-      libxml2-dev libxslt-dev libcurl3 libicu-dev checkinstall gettext \
+      libxml2-dev libxslt-dev libcurl3 libicu-dev gettext \
  && update-locale LANG=C.UTF-8 LC_MESSAGES=POSIX \
  && locale-gen en_US.UTF-8 \
  && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure locales \
@@ -85,25 +85,14 @@ RUN cd /tmp \
 
 RUN ln -s /usr/local/bin/git /usr/bin/git
 
+RUN mkdir -p ${GITLAB_LOG_DIR}/supervisor
+
 COPY assets/build/ ${GITLAB_BUILD_DIR}/
 COPY ./assets/build/config /tmp/configs
 
 # install build dependencies for gem installation
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y ${BUILD_DEPENDENCIES}
-
-# Install RE2 library wich became dependencie since 9.3.8 version
-# https://gitlab.com/gitlab-org/gitlab-ce/issues/35342
-#DEBIAN_FRONTEND=noninteractive apt-get install -y checkinstall
-#cd /tmp
-#git clone https://github.com/google/re2.git
-#cd re2/ && make && make test
-#checkinstall -D --install=no -y --pkgname=re2 --pkgversion=1-current
-#dpkg -i re2_1-current-1_amd64.deb
-#ldconfig
-#cd -
-#rm -rf /tmp/re2
-#DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove checkinstall
 
 # https://en.wikibooks.org/wiki/Grsecurity/Application-specific_Settings#Node.js
 RUN paxctl -Cm `which nodejs`
