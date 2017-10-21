@@ -85,8 +85,6 @@ RUN cd /tmp \
 
 RUN ln -s /usr/local/bin/git /usr/bin/git
 
-RUN mkdir -p ${GITLAB_LOG_DIR}/supervisor
-
 COPY assets/build/ ${GITLAB_BUILD_DIR}/
 COPY ./assets/build/config /tmp/configs
 
