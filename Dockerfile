@@ -6,7 +6,7 @@ RUN cat /tmp/banner
 
 ENV GITLAB_VERSION=10.0.4 \
     RUBY_VERSION=2.3 \
-    GOLANG_VERSION=1.8.3 \
+    GOLANG_VERSION=go1.8.3 \
     GITLAB_SHELL_VERSION=5.9.0 \
     GITLAB_WORKHORSE_VERSION=3.0.0 \
     GITLAB_PAGES_VERSION=0.5.1 \
@@ -27,7 +27,9 @@ ENV GITLAB_INSTALL_DIR="${GITLAB_HOME}/gitlab" \
     GITLAB_BUILD_DIR="${GITLAB_CACHE_DIR}/build" \
     GITLAB_RUNTIME_DIR="${GITLAB_CACHE_DIR}/runtime" \
     GITLAB_CONF_DIRECTORY="/tmp/configs" \
-    EXEC_AS_GIT="sudo -HEu ${GITLAB_USER}"
+    EXEC_AS_GIT="sudo -HEu ${GITLAB_USER}" \
+    GOROOT_BOOTSTRAP="/tmp/go1.4" \
+    GOROOT="/tmp/go"
 
 ENV GITLAB_CLONE_URL=https://gitlab.com/gitlab-org/gitlab-ce.git \
     GITLAB_SHELL_URL=https://gitlab.com/gitlab-org/gitlab-shell/repository/archive.tar.gz \
@@ -58,14 +60,14 @@ RUN echo 'APT::Install-Recommends 0;' >> /etc/apt/apt.conf.d/01norecommends \
 # && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
 # && echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
 
-RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
- && echo 'deb https://deb.nodesource.com/node_8.x trusty main' > /etc/apt/sources.list.d/nodesource.list \
- && wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg  | apt-key add - \
+# RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
+#  && echo 'deb https://deb.nodesource.com/node_8.x trusty main' > /etc/apt/sources.list.d/nodesource.list \
+RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg  | apt-key add - \
  && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake pkg-config supervisor logrotate locales curl \
       nginx openssh-server postgresql-client redis-tools \
-      ruby${RUBY_VERSION} python2.7 python-docutils nodejs yarn gettext-base \
+      ruby${RUBY_VERSION} python2.7 python-docutils nodejs nodejs-legacy yarn gettext-base \
       libpq-dev zlib1g-dev libyaml-dev libssl-dev \
       libgdbm-dev libre2-dev libreadline-dev libcurl4-openssl-dev libncurses5-dev libffi-dev \
       libxml2-dev libxslt-dev libcurl3 libicu-dev gettext \
@@ -119,9 +121,25 @@ RUN ${EXEC_AS_GIT} git clone -q -b v${GITLAB_VERSION} --depth 1 ${GITLAB_CLONE_U
 #     GITLAB_PAGES_VERSION="${GITLAB_PAGES_VERSION:-$(cat ${GITLAB_INSTALL_DIR}/GITLAB_PAGES_VERSION)}"
 
 #download golang
-RUN echo "Downloading Go ${GOLANG_VERSION}..."
-RUN wget -cnv https://storage.googleapis.com/golang/go${GOLANG_VERSION}.linux-amd64.tar.gz -P ${GITLAB_BUILD_DIR}/
-RUN tar -xf ${GITLAB_BUILD_DIR}/go${GOLANG_VERSION}.linux-amd64.tar.gz -C /tmp/
+#RUN echo "Downloading Go ${GOLANG_VERSION}..."
+#RUN wget -cnv https://storage.googleapis.com/golang/go${GOLANG_VERSION}.linux-amd64.tar.gz -P ${GITLAB_BUILD_DIR}/
+#RUN tar -xf ${GITLAB_BUILD_DIR}/go${GOLANG_VERSION}.linux-amd64.tar.gz -C /tmp/
+
+# fetch and build Go compiler
+RUN wget -cnv https://storage.googleapis.com/golang/go1.4-bootstrap-20170531.tar.gz -P /tmp/ \
+ && tar -xf /tmp/go1.4-bootstrap-20170531.tar.gz -C /tmp/ \
+ && mv /tmp/go /tmp/go1.4 \
+ && cd /tmp/go1.4/src \
+ && /bin/bash ./make.bash
+
+ENV GOROOT_BOOTSTRAP=/tmp/go1.4
+ENV GOROOT=/tmp/go
+
+# fetch and build golang
+RUN git clone -b ${GOLANG_VERSION} https://go.googlesource.com/go /tmp/go
+RUN cd /tmp/go/src \
+ && /bin/bash ./make.bash
+
 
 # install gitlab-shell
 RUN echo "Downloading gitlab-shell v.${GITLAB_SHELL_VERSION}..."
@@ -197,7 +215,7 @@ RUN cd ${GITLAB_INSTALL_DIR} \
  && ${EXEC_AS_GIT} bundle install -j$(nproc) --deployment --without development test mysql aws kerberos
 
 # make sure everything in ${GITLAB_HOME} is owned by ${GITLAB_USER} user
-RUN chown -v -R ${GITLAB_USER}: ${GITLAB_HOME}
+RUN chown -R ${GITLAB_USER}: ${GITLAB_HOME}
 
 # gitlab.yml and database.yml are required for `assets:precompile`
 RUN ${EXEC_AS_GIT} cp ${GITLAB_INSTALL_DIR}/config/resque.yml.example ${GITLAB_INSTALL_DIR}/config/resque.yml
