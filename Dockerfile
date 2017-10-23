@@ -4,7 +4,7 @@ MAINTAINER sameer@damagehead.com
 COPY ./banner /tmp/
 RUN cat /tmp/banner
 
-ENV GITLAB_VERSION=10.0.2 \
+ENV GITLAB_VERSION=10.0.4 \
     RUBY_VERSION=2.3 \
     GOLANG_VERSION=1.8.3 \
     GITLAB_SHELL_VERSION=5.9.0 \
