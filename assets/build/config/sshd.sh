@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 sed -i \
   -e "s|^[#]*UsePAM yes|UsePAM no|" \

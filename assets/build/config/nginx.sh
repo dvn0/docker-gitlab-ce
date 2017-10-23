@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 sed -i \
   -e "s|access_log /var/log/nginx/access.log;|access_log ${GITLAB_LOG_DIR}/nginx/access.log;|" \

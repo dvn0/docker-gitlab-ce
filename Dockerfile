@@ -260,41 +260,41 @@ RUN sed -i "s|^[#]*logfile=.*|logfile=${GITLAB_LOG_DIR}/supervisor/supervisord.l
 RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/nginx.sh
 
 # configure supervisord log rotation
-RUN cat ${GITLAB_CONF_DIRECTORY}/logrotate-supervisord.conf > /etc/logrotate.d/supervisord
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/logrotate-supervisord.sh
 
 # configure gitlab log rotation
-RUN cat ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab.conf > /etc/logrotate.d/gitlab
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab.sh
 
 # configure gitlab-shell log rotation
-RUN cat ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab-shell.conf > /etc/logrotate.d/gitlab-shell
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab-shell.sh
 
 # configure gitlab vhost log rotation
-RUN cat ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab-vhost.conf > /etc/logrotate.d/gitlab-nginx
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/logrotate-gitlab-nginx.sh
 
 # configure supervisord to start unicorn
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-unicorn.conf > /etc/supervisor/conf.d/unicorn.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-unicorn.sh
 
 # configure supervisord to start sidekiq
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-sidekiq.conf > /etc/supervisor/conf.d/sidekiq.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-sidekiq.sh
 
 # configure supervisord to start gitlab-workhorse
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-workhorse.conf > /etc/supervisor/conf.d/gitlab-workhorse.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-workhorse.sh
 
 # configure supervisord to start gitaly
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-gitaly.conf > /etc/supervisor/conf.d/gitaly.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-gitaly.sh
 
 # configure supervisord to start mail_room
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-mail_room.conf  > /etc/supervisor/conf.d/mail_room.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-mail_room.sh
 
 # configure supervisor to start sshd
 RUN mkdir -p /var/run/sshd \
-&& cat ${GITLAB_CONF_DIRECTORY}/supervisord-sshd.config  > /etc/supervisor/conf.d/sshd.conf
+&& /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-sshd.sh
 
 # configure supervisord to start nginx
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-nginx.conf > /etc/supervisor/conf.d/nginx.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-nginx.sh
 
 # configure supervisord to start crond
-RUN cat ${GITLAB_CONF_DIRECTORY}/supervisord-crond.conf > /etc/supervisor/conf.d/cron.conf
+RUN /bin/bash ${GITLAB_CONF_DIRECTORY}/supervisord-crond.sh
 
 # purge build dependencies and cleanup apt
 RUN DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove ${BUILD_DEPENDENCIES}
