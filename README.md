@@ -1,7 +1,6 @@
-[![Docker Repository on Quay.io](https://quay.io/repository/sameersbn/gitlab/status "Docker Repository on Quay.io")](https://quay.io/repository/sameersbn/gitlab)
-[![](https://images.microbadger.com/badges/image/sameersbn/gitlab.svg)](http://microbadger.com/images/sameersbn/gitlab "Get your own image badge on microbadger.com")
 
-# sameersbn/gitlab:10.0.2
+# dvn/gitlab:10.0.4
+*forked from https://github.com/sameersbn/docker-gitlab*
 
 - [Introduction](#introduction)
     - [Changelog](Changelog.md)
