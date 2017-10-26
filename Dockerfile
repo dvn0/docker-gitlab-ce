@@ -51,23 +51,10 @@ RUN echo 'APT::Install-Recommends 0;' >> /etc/apt/apt.conf.d/01norecommends \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y curl vim.tiny wget sudo net-tools ca-certificates unzip apt-transport-https gnupg2 dirmngr \
  && rm -rf /var/lib/apt/lists/*
 
-# apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E1DD270288B4E6030699E45FA1715D88E1DF1F24 \
-# && echo "deb http://ppa.launchpad.net/git-core/ppa/ubuntu trusty main" >> /etc/apt/sources.list \
-# && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 80F70E11F0F0D5F10CB20E62F5DA5F09C3173AA6 \
-# && echo "deb http://ppa.launchpad.net/brightbox/ruby-ng/ubuntu trusty main" >> /etc/apt/sources.list \
-# && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8B3981E7A6852F782CC4951600A6F0A3C300EE8C \
-# && echo "deb http://ppa.launchpad.net/nginx/stable/ubuntu trusty main" >> /etc/apt/sources.list \
-# && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-# && echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
-
-# RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
-#  && echo 'deb https://deb.nodesource.com/node_8.x trusty main' > /etc/apt/sources.list.d/nodesource.list \
-RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg  | apt-key add - \
- && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
- && apt-get update \
+RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake pkg-config supervisor logrotate locales curl \
       nginx openssh-server postgresql-client redis-tools \
-      ruby${RUBY_VERSION} python2.7 python-docutils nodejs nodejs-legacy yarn gettext-base \
+      ruby${RUBY_VERSION} python2.7 python-docutils nodejs nodejs-legacy gettext-base \
       libpq-dev zlib1g-dev libyaml-dev libssl-dev \
       libgdbm-dev libre2-dev libreadline-dev libcurl4-openssl-dev libncurses5-dev libffi-dev \
       libxml2-dev libxslt-dev libcurl3 libicu-dev gettext \
@@ -77,6 +64,7 @@ RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg  | apt-key add - 
  && gem install --no-document bundler \
  && rm -rf /var/lib/apt/lists/*
 
+# fetch and install Git from source
 RUN cd /tmp \
  && curl --remote-name --progress https://www.kernel.org/pub/software/scm/git/git-2.8.4.tar.gz \
  && echo '626e319f8a24fc0866167ea5f6bf3e2f38f69d6cb2e59e150f13709ca3ebf301  git-2.8.4.tar.gz' | shasum -a256 -c - && tar -xzf git-2.8.4.tar.gz \
@@ -84,8 +72,15 @@ RUN cd /tmp \
  && ./configure \
  && make prefix=/usr/local all \
  && make prefix=/usr/local install
-
 RUN ln -s /usr/local/bin/git /usr/bin/git
+
+# install yarn
+RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg  | apt-key add - \
+ && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y yarn
+RUN rm -f /etc/apt/sources.list.d/yarn.list
+
 
 COPY assets/build/ ${GITLAB_BUILD_DIR}/
 COPY ./assets/build/config /tmp/configs
