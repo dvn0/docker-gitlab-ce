@@ -1,5 +1,5 @@
 FROM debian:stretch
-MAINTAINER sameer@damagehead.com
+MAINTAINER docker@dvn.me
 
 COPY ./banner /tmp/
 RUN cat /tmp/banner
