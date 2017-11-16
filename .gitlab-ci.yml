@@ -1,5 +1,9 @@
 image: docker:dind
 
+variables:
+  CI_REPOSITORY_URL: "registry.gitlab.secushare.org/infrastructure/docker-gitlab"
+  DOCKER_IMAGE: "docker-gitlab"
+
 deploy:
   script:
     - ci/gitlab
