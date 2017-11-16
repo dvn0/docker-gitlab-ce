@@ -4,6 +4,8 @@ set -e
 
 VERSION=$(cat VERSION)
 
+echo "${CI_REGISTRY}"
+
 docker build -t registry.gitlab.secushare.org/infrastructure/docker-gitlab:latest .
 
 #docker tag $DOCKER_IMAGE $DOCKER_REGISTRY_HOST/$DOCKER_IMAGE:latest
