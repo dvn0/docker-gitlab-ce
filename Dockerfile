@@ -4,7 +4,7 @@ MAINTAINER docker@dvn.me
 COPY ./banner /tmp/
 RUN cat /tmp/banner
 
-ENV GITLAB_VERSION=10.0.4 \
+ENV GITLAB_VERSION=10.1.3 \
     RUBY_VERSION=2.3 \
     GOLANG_VERSION=go1.8.3 \
     GITLAB_SHELL_VERSION=5.9.0 \
